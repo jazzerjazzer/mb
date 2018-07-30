@@ -1,0 +1,10 @@
+language: go
+
+go:
+  - 1.8
+  - stable
+  - master
+
+matrix:
+  allow_failures:
+    - go: master
