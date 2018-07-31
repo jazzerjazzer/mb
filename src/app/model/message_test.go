@@ -68,6 +68,15 @@ func TestValidate(t *testing.T) {
 			},
 			expectedError: errors.ErrMaxRecipientsExceeded,
 		},
+		{
+			description: "valid model",
+			message: &Message{
+				Originator: "+4915166962555",
+				Body:       "Test body",
+				Recipients: []string{"recipient1"},
+			},
+			expectedError: nil,
+		},
 	}
 
 	for _, testCase := range tests {

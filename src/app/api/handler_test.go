@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/messagebird/go-rest-api"
 
@@ -19,8 +20,8 @@ func TestSendMessage(t *testing.T) {
 		description         string
 		request             *model.Message
 		messageBirdResponse *messagebird.Message
-		expectedBody        string
 		expectedStatusCode  int
+		timeout             bool
 	}{
 		{
 			description:        "nil request",
@@ -33,14 +34,38 @@ func TestSendMessage(t *testing.T) {
 			expectedStatusCode: http.StatusBadRequest,
 		},
 		{
-			description: "Happy path",
+			description: "response timeout",
 			request: &model.Message{
-				Originator: "Test originator",
+				Originator: "TestO",
+				Body:       "Test message",
+				Recipients: []string{"1", "2"},
+			},
+			expectedStatusCode: http.StatusRequestTimeout,
+			timeout:            true,
+		},
+		{
+			description: "messagebird api errors",
+			request: &model.Message{
+				Originator: "TestO",
 				Body:       "Test message",
 				Recipients: []string{"1", "2"},
 			},
 			messageBirdResponse: &messagebird.Message{
-				Originator: "Test originator",
+				Errors: []messagebird.Error{
+					{Code: http.StatusInternalServerError},
+				},
+			},
+			expectedStatusCode: http.StatusInternalServerError,
+		},
+		{
+			description: "Happy path",
+			request: &model.Message{
+				Originator: "TestO",
+				Body:       "Test message",
+				Recipients: []string{"1", "2"},
+			},
+			messageBirdResponse: &messagebird.Message{
+				Originator: "TestO",
 				Body:       "Test message",
 				Errors:     nil,
 				Recipients: messagebird.Recipients{
@@ -68,7 +93,12 @@ func TestSendMessage(t *testing.T) {
 			go func() {
 				select {
 				case request := <-messagingAPI.requests:
-					request.ResponseChannel <- testCase.messageBirdResponse
+					if testCase.timeout {
+						// Simulate timeout
+						time.Sleep(5 * time.Second)
+					} else {
+						request.ResponseChannel <- testCase.messageBirdResponse
+					}
 				}
 			}()
 			defer close(requestChannel)
@@ -84,6 +114,11 @@ func TestSendMessage(t *testing.T) {
 			handler.ServeHTTP(rr, req)
 
 			require.Equal(t, testCase.expectedStatusCode, rr.Code)
+
+			json.NewEncoder(&buf).Encode(testCase.messageBirdResponse)
+			if testCase.expectedStatusCode == http.StatusOK {
+				require.Equal(t, buf.String(), rr.Body.String())
+			}
 		})
 	}
 }
