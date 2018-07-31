@@ -19,7 +19,7 @@ func main() {
 	messagingAPI := api.New(requestChannel, client)
 	messagingAPI.StartRequestLoop()
 
-	http.HandleFunc("/sendMessage", server.Method("POST", messagingAPI.SendMessage))
+	http.HandleFunc("/sendMessage", server.Method(http.MethodPost, messagingAPI.SendMessage))
 	log.Print("Starting service...")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

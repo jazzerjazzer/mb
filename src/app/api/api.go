@@ -1,21 +1,20 @@
 package api
 
 import (
+	"app/client"
 	"app/model"
 	"time"
-
-	"github.com/messagebird/go-rest-api"
 )
 
 type MessageAPI struct {
 	requests chan (model.MBSendRequest)
-	client   *messagebird.Client
+	client   client.Interface
 }
 
-func New(requestChannel chan (model.MBSendRequest), client *messagebird.Client) *MessageAPI {
+func New(requestChannel chan (model.MBSendRequest), c client.Interface) *MessageAPI {
 	return &MessageAPI{
 		requests: requestChannel,
-		client:   client,
+		client:   c,
 	}
 }
 

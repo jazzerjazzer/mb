@@ -8,7 +8,7 @@ import (
 func (mb *MessageAPI) Send(req model.MBSendRequest) {
 	resp, err := mb.client.NewMessage(req.Message.Originator, req.Message.Recipients, req.Message.Body, nil)
 	if err != nil {
-		log.Printf("Cannot send message to MessageBird backend: %+v -- %v", err, resp.Errors)
+		log.Printf("Cannot send message to MessageBird backend: %+v", err)
 		resp = nil
 	}
 	select {

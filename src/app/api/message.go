@@ -11,11 +11,6 @@ import (
 )
 
 func (api *MessageAPI) SendMessage(w http.ResponseWriter, r *http.Request) {
-	if r.Body == nil {
-		http.Error(w, "No request body", http.StatusBadRequest)
-		return
-	}
-
 	var message model.Message
 	if err := json.NewDecoder(r.Body).Decode(&message); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
