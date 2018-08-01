@@ -15,6 +15,8 @@ type Message struct {
 	Originator string   `json:"originator,omitempty"`
 	Body       string   `json:"body,omitempty"`
 	Recipients []string `json:"recipients,omitempty"`
+	UDH        string
+	Datacoding string
 }
 
 func (m *Message) Validate() error {

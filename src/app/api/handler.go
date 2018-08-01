@@ -2,6 +2,7 @@ package api
 
 import (
 	"app/model"
+	"app/split"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -25,20 +26,32 @@ func (api *MessageAPI) SendMessage(w http.ResponseWriter, r *http.Request) {
 	response := make(chan *messagebird.Message)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer close(response)
-	request := model.MBSendRequest{
-		ResponseChannel: response,
-		Context:         ctx,
-		Message:         message,
+
+	messages := split.Split(message.Body)
+	for _, msg := range messages {
+		splitted := model.Message{
+			Recipients: message.Recipients,
+			Originator: message.Originator,
+			Body:       msg.Message,
+			UDH:        msg.UDH,
+			Datacoding: msg.Datacoding,
+		}
+		request := model.MBSendRequest{
+			ResponseChannel: response,
+			Context:         ctx,
+			Message:         splitted,
+		}
+		api.requests <- request
 	}
 
-	api.requests <- request
-
-	select {
-	case r := <-response:
-		composeResponse(w, r)
-	case <-time.After(5 * time.Second):
-		cancel()
-		w.WriteHeader(http.StatusRequestTimeout)
+	for i := 0; i < 2; i++ {
+		select {
+		case r := <-response:
+			composeResponse(w, r)
+		case <-time.After(10 * time.Second):
+			cancel()
+			w.WriteHeader(http.StatusRequestTimeout)
+		}
 	}
 }
 
