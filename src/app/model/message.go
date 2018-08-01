@@ -48,7 +48,3 @@ func (m *Message) Validate() error {
 
 	return nil
 }
-
-func (m *Message) GetBodyLength() int {
-	return 0
-}
