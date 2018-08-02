@@ -10,11 +10,18 @@ import (
 	"github.com/messagebird/go-rest-api"
 )
 
+var (
+	apiKey string
+)
+
 func main() {
 	// Create the request channel
 	requestChannel := make(chan model.MBSendRequest)
 	// Create messagebird client
-	client := messagebird.New("Wxsljyqzf0kbikO96mtpyY2xw")
+	if apiKey == "" {
+		log.Fatalln("No API Key is provided...")
+	}
+	client := messagebird.New(apiKey)
 	// Create the api
 	messagingAPI := api.New(requestChannel, client)
 	messagingAPI.StartRequestLoop()
