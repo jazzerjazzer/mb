@@ -1,4 +1,4 @@
-package split
+package char
 
 var baseGSM7 = map[rune]byte{
 	'@':  0x00,
@@ -131,7 +131,6 @@ var baseGSM7 = map[rune]byte{
 }
 
 var extendedGSM7 = map[rune]byte{
-	' ':  0x0A,
 	'^':  0x14,
 	'{':  0x28,
 	'}':  0x29,
@@ -141,28 +140,4 @@ var extendedGSM7 = map[rune]byte{
 	']':  0x3E,
 	'|':  0x40,
 	'€':  0x65,
-}
-
-func isBaseGSM7(r rune) bool {
-	_, ok := baseGSM7[r]
-	return ok
-}
-
-func isExtendedGSM7(r rune) bool {
-	_, ok := extendedGSM7[r]
-	return ok
-}
-
-func isUnicode(r rune) bool {
-	return !isBaseGSM7(r) && !isExtendedGSM7(r)
-}
-
-func getLength(r rune) int {
-	if isUnicode(r) {
-		return 1
-	} else if isBaseGSM7(r) {
-		return 1
-	} else { // Extended
-		return 2
-	}
 }

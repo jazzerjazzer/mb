@@ -1,6 +1,7 @@
 package split
 
 import (
+	"app/char"
 	"app/model"
 	"fmt"
 )
@@ -18,15 +19,17 @@ const (
 
 func Split(m string) []model.Split {
 	datacoding := getDatacoding(m)
-	length := getCharLength(m, datacoding)
+	length := getLength(m, datacoding)
 	if datacoding == datacodingPlain {
 		if length > maxSinglePlainChars {
-			return getUDH(splitImpl(m, maxMultiPlainChars), datacodingPlain)
+			splitted := splitImpl(m, maxMultiPlainChars)
+			return attachMetadata(splitted, datacodingPlain)
 		}
 		return []model.Split{{Message: m, UDH: "", Datacoding: datacodingPlain}}
 	}
 	if length > maxSingleUnicodeChars {
-		return getUDH(splitImpl(m, maxMultiPlainChars), datacodingUnicode)
+		splitted := splitImpl(m, maxMultiUnicodeChars)
+		return attachMetadata(splitted, datacodingUnicode)
 	}
 	return []model.Split{{Message: m, UDH: "", Datacoding: datacodingUnicode}}
 }
@@ -37,7 +40,7 @@ func splitImpl(message string, limit int) []model.Split {
 	var splitted []model.Split
 
 	for _, r := range message {
-		totalLength += getLength(r)
+		totalLength += char.GetLength(r)
 		if totalLength == limit {
 			currentMessage = currentMessage + string(r)
 			splitted = append(splitted, model.Split{Message: currentMessage})
@@ -56,27 +59,26 @@ func splitImpl(message string, limit int) []model.Split {
 	}
 
 	return splitted
-	// TODO: Return the messages with UDH
 }
 
-func getUDH(messages []model.Split, datacoding Datacoding) []model.Split {
+func attachMetadata(messages []model.Split, datacoding Datacoding) []model.Split {
 	length := len(messages)
+	// TODO: Hardcoded reference?
 	reference := "CC"
-	for i, _ := range messages {
+	for i := range messages {
 		udh := "050003" + reference + fmt.Sprintf("%02X", length) + fmt.Sprintf("%02X", i+1)
 		messages[i].UDH = udh
 		messages[i].Datacoding = string(datacoding)
 	}
-
 	return messages
 }
 
-func getCharLength(body string, datacoding Datacoding) int {
+func getLength(body string, datacoding Datacoding) int {
 	var length int
 	switch datacoding {
 	case datacodingPlain:
 		for _, r := range body {
-			if isBaseGSM7(r) {
+			if char.IsBaseGSM7(r) {
 				length++
 			} else {
 				length = length + 2
@@ -90,8 +92,8 @@ func getCharLength(body string, datacoding Datacoding) int {
 
 func getDatacoding(body string) Datacoding {
 	for _, r := range body {
-		if !isBaseGSM7(r) {
-			if !isExtendedGSM7(r) {
+		if !char.IsBaseGSM7(r) {
+			if !char.IsExtendedGSM7(r) {
 				return datacodingUnicode
 			}
 		}

@@ -12,12 +12,13 @@ import (
 )
 
 func (api *MessageAPI) SendMessage(w http.ResponseWriter, r *http.Request) {
+	// Unmarshal the request
 	var message model.Message
 	if err := json.NewDecoder(r.Body).Decode(&message); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
+	// Validate the request
 	if err := message.Validate(); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -44,23 +45,29 @@ func (api *MessageAPI) SendMessage(w http.ResponseWriter, r *http.Request) {
 		api.requests <- request
 	}
 
-	for i := 0; i < 2; i++ {
+	var responses []*messagebird.Message
+	// Wait for all responses
+	for i := 0; i < len(messages); i++ {
 		select {
 		case r := <-response:
-			composeResponse(w, r)
+			responses = append(responses, r)
 		case <-time.After(10 * time.Second):
 			cancel()
 			w.WriteHeader(http.StatusRequestTimeout)
 		}
 	}
+	composeResponse(w, responses)
 }
 
-func composeResponse(w http.ResponseWriter, r *messagebird.Message) {
-	if r == nil || len(r.Errors) != 0 {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+func composeResponse(w http.ResponseWriter, responses []*messagebird.Message) {
+	for _, r := range responses {
+		if r == nil {
+			// Unexpected response from messagebird
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
-	if err := json.NewEncoder(w).Encode(r); err != nil {
+	if err := json.NewEncoder(w).Encode(responses); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

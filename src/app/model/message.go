@@ -2,6 +2,7 @@ package model
 
 import (
 	"app/errors"
+	"encoding/hex"
 
 	"github.com/nyaruka/phonenumbers"
 )
@@ -17,6 +18,13 @@ type Message struct {
 	Recipients []string `json:"recipients,omitempty"`
 	UDH        string
 	Datacoding string
+}
+
+func (message Message) GetBinaryBody() string {
+	src := []byte(message.Body)
+	dst := make([]byte, hex.EncodedLen(len(src)))
+	hex.Encode(dst, src)
+	return string(dst)
 }
 
 func (m *Message) Validate() error {

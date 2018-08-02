@@ -2,22 +2,24 @@ package api
 
 import (
 	"app/model"
-	"encoding/hex"
-	"fmt"
 	"log"
 
 	"github.com/messagebird/go-rest-api"
 )
 
-func (mb *MessageAPI) Send(req model.MBSendRequest) {
-	params := &messagebird.MessageParams{Type: "binary", TypeDetails: messagebird.TypeDetails{"udh": req.Message.UDH},
-		DataCoding: req.Message.Datacoding}
+const (
+	MessageTypeBinary = "binary"
+	TypeDetailUDH     = "udh"
+)
 
-	src := []byte(req.Message.Body)
-	dst := make([]byte, hex.EncodedLen(len(src)))
-	hex.Encode(dst, src)
-	fmt.Printf("UDH: %+v\n\n", req.Message.UDH)
-	resp, err := mb.client.NewMessage(req.Message.Originator, req.Message.Recipients, string(dst), params)
+func (mb *MessageAPI) Send(req model.MBSendRequest) {
+	params := &messagebird.MessageParams{
+		Type:        MessageTypeBinary,
+		TypeDetails: messagebird.TypeDetails{TypeDetailUDH: req.Message.UDH},
+		DataCoding:  req.Message.Datacoding,
+	}
+
+	resp, err := mb.client.NewMessage(req.Message.Originator, req.Message.Recipients, req.Message.GetBinaryBody(), params)
 	if err != nil {
 		log.Printf("Cannot send message to MessageBird backend: %+v", err)
 		resp = nil
