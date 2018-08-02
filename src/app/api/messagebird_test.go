@@ -8,7 +8,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/messagebird/go-rest-api"
@@ -61,6 +60,7 @@ func TestSend(t *testing.T) {
 					Originator: "originator",
 					Body:       "body",
 					Recipients: []string{"recipient"},
+					UDH:        "TestUDH",
 				},
 			},
 			messagebirdResponse: &messagebird.Message{
@@ -79,7 +79,11 @@ func TestSend(t *testing.T) {
 			// Mock messagebird calls
 			mockedClient := new(mocked.Interface)
 			mockedClient.On("NewMessage", message.Originator,
-				message.Recipients, message.Body, mock.Anything).Return(testCase.messagebirdResponse, testCase.messagebirdError)
+				message.Recipients, message.GetBinaryBody(), &messagebird.MessageParams{
+					Type:        MessageTypeBinary,
+					TypeDetails: messagebird.TypeDetails{TypeDetailUDH: message.UDH},
+					DataCoding:  message.Datacoding,
+				}).Return(testCase.messagebirdResponse, testCase.messagebirdError)
 			messagingAPI := New(nil, mockedClient)
 
 			// Test cancelled context path

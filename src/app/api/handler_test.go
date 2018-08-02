@@ -17,11 +17,11 @@ import (
 func TestSendMessage(t *testing.T) {
 
 	tests := []struct {
-		description         string
-		request             *model.Message
-		messageBirdResponse *messagebird.Message
-		expectedStatusCode  int
-		timeout             bool
+		description          string
+		request              *model.Message
+		messageBirdResponses []*messagebird.Message
+		expectedStatusCode   int
+		timeout              bool
 	}{
 		{
 			description:        "nil request",
@@ -50,10 +50,24 @@ func TestSendMessage(t *testing.T) {
 				Body:       "Test message",
 				Recipients: []string{"1", "2"},
 			},
-			messageBirdResponse: &messagebird.Message{
-				Errors: []messagebird.Error{
-					{Code: http.StatusInternalServerError},
+			messageBirdResponses: []*messagebird.Message{
+				&messagebird.Message{
+					Errors: []messagebird.Error{
+						{Code: http.StatusInternalServerError},
+					},
 				},
+			},
+			expectedStatusCode: http.StatusOK,
+		},
+		{
+			description: "messagebird nil resp",
+			request: &model.Message{
+				Originator: "TestO",
+				Body:       "Test message",
+				Recipients: []string{"1", "2"},
+			},
+			messageBirdResponses: []*messagebird.Message{
+				nil,
 			},
 			expectedStatusCode: http.StatusInternalServerError,
 		},
@@ -64,19 +78,66 @@ func TestSendMessage(t *testing.T) {
 				Body:       "Test message",
 				Recipients: []string{"1", "2"},
 			},
-			messageBirdResponse: &messagebird.Message{
-				Originator: "TestO",
-				Body:       "Test message",
-				Errors:     nil,
-				Recipients: messagebird.Recipients{
-					TotalCount:     1,
-					TotalSentCount: 1,
-					Items: []messagebird.Recipient{
-						{
-							Recipient: 1,
+			messageBirdResponses: []*messagebird.Message{
+				{
+					Originator: "TestO",
+					Body:       "Test message",
+					Errors:     nil,
+					Recipients: messagebird.Recipients{
+						TotalCount:     1,
+						TotalSentCount: 1,
+						Items: []messagebird.Recipient{
+							{
+								Recipient: 1,
+							},
+							{
+								Recipient: 2,
+							},
 						},
-						{
-							Recipient: 2,
+					},
+				},
+			},
+			expectedStatusCode: http.StatusOK,
+		},
+		{
+			description: "Happy path/unicode/splitted message",
+			request: &model.Message{
+				Originator: "TestO",
+				Body:       "This is a test message. Also it contains some uniçode chars, let's  } make it two messages",
+				Recipients: []string{"1", "2"},
+			},
+			messageBirdResponses: []*messagebird.Message{
+				{
+					Originator: "TestO",
+					Body:       "This is a test message. Also it contains some uniçode chars, let's ",
+					Errors:     nil,
+					Recipients: messagebird.Recipients{
+						TotalCount:     2,
+						TotalSentCount: 2,
+						Items: []messagebird.Recipient{
+							{
+								Recipient: 1,
+							},
+							{
+								Recipient: 2,
+							},
+						},
+					},
+				},
+				{
+					Originator: "TestO",
+					Body:       " } make it two messages",
+					Errors:     nil,
+					Recipients: messagebird.Recipients{
+						TotalCount:     2,
+						TotalSentCount: 2,
+						Items: []messagebird.Recipient{
+							{
+								Recipient: 1,
+							},
+							{
+								Recipient: 2,
+							},
 						},
 					},
 				},
@@ -95,9 +156,11 @@ func TestSendMessage(t *testing.T) {
 				case request := <-messagingAPI.requests:
 					if testCase.timeout {
 						// Simulate timeout
-						time.Sleep(5 * time.Second)
+						time.Sleep(10 * time.Second)
 					} else {
-						request.ResponseChannel <- testCase.messageBirdResponse
+						for _, resp := range testCase.messageBirdResponses {
+							request.ResponseChannel <- resp
+						}
 					}
 				}
 			}()
@@ -115,7 +178,7 @@ func TestSendMessage(t *testing.T) {
 
 			require.Equal(t, testCase.expectedStatusCode, rr.Code)
 
-			json.NewEncoder(&buf).Encode(testCase.messageBirdResponse)
+			json.NewEncoder(&buf).Encode(testCase.messageBirdResponses)
 			if testCase.expectedStatusCode == http.StatusOK {
 				require.Equal(t, buf.String(), rr.Body.String())
 			}
