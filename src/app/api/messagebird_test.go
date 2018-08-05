@@ -32,7 +32,9 @@ func TestSend(t *testing.T) {
 					Originator: "originator",
 					Body:       "body",
 					Recipients: []string{"recipient"},
+					Datacoding: model.DatacodingPlain,
 				},
+				MessageType: model.MessageTypeSMS,
 			},
 			messagebirdResponse: nil,
 			messagebirdError:    errors.New("API error"),
@@ -45,8 +47,10 @@ func TestSend(t *testing.T) {
 					Originator: "originator",
 					Body:       "body",
 					Recipients: []string{"recipient"},
+					Datacoding: model.DatacodingPlain,
 				},
-				Context: ctx,
+				MessageType: model.MessageTypeSMS,
+				Context:     ctx,
 			},
 			contextCancel: cancel,
 			isCancelled:   true,
@@ -58,10 +62,32 @@ func TestSend(t *testing.T) {
 				Context:         context.Background(),
 				Message: model.Message{
 					Originator: "originator",
+					Body:       "body ç",
+					Recipients: []string{"recipient"},
+					UDH:        "TestUDH",
+					Datacoding: model.DatacodingUnicode,
+				},
+				MessageType: model.MessageTypeSMS,
+			},
+			messagebirdResponse: &messagebird.Message{
+				Originator: "originator",
+				Body:       "body",
+			},
+			messagebirdError: nil,
+		},
+		{
+			description: "messagebird api call success/binary",
+			request: model.MBSendRequest{
+				ResponseChannel: make(chan *messagebird.Message),
+				Context:         context.Background(),
+				Message: model.Message{
+					Originator: "originator",
 					Body:       "body",
 					Recipients: []string{"recipient"},
 					UDH:        "TestUDH",
+					Datacoding: model.DatacodingPlain,
 				},
+				MessageType: model.MessageTypeBinary,
 			},
 			messagebirdResponse: &messagebird.Message{
 				Originator: "originator",
@@ -79,10 +105,10 @@ func TestSend(t *testing.T) {
 			// Mock messagebird calls
 			mockedClient := new(mocked.Interface)
 			mockedClient.On("NewMessage", message.Originator,
-				message.Recipients, message.GetBinaryBody(), &messagebird.MessageParams{
-					Type:        MessageTypeBinary,
+				message.Recipients, message.Body, &messagebird.MessageParams{
+					Type:        string(testCase.request.MessageType),
 					TypeDetails: messagebird.TypeDetails{TypeDetailUDH: message.UDH},
-					DataCoding:  message.Datacoding,
+					DataCoding:  string(message.Datacoding),
 				}).Return(testCase.messagebirdResponse, testCase.messagebirdError)
 			messagingAPI := New(nil, mockedClient)
 

@@ -51,7 +51,7 @@ func TestSendMessage(t *testing.T) {
 				Recipients: []string{"1", "2"},
 			},
 			messageBirdResponses: []*messagebird.Message{
-				&messagebird.Message{
+				{
 					Errors: []messagebird.Error{
 						{Code: http.StatusInternalServerError},
 					},
@@ -182,6 +182,122 @@ func TestSendMessage(t *testing.T) {
 			if testCase.expectedStatusCode == http.StatusOK {
 				require.Equal(t, buf.String(), rr.Body.String())
 			}
+		})
+	}
+}
+
+func TestComposeRequest(t *testing.T) {
+	tests := []struct {
+		description     string
+		givenMessage    model.Message
+		expectedRequest []model.MBSendRequest
+	}{
+		{
+			description: "single message/plain",
+			givenMessage: model.Message{
+				Originator: "TestO",
+				Body:       "Test message",
+				Recipients: []string{"1", "2"},
+			},
+			expectedRequest: []model.MBSendRequest{
+				{
+					Message: model.Message{
+						Originator: "TestO",
+						Body:       "Test message",
+						Recipients: []string{"1", "2"},
+						Datacoding: model.DatacodingPlain,
+					},
+					MessageType: model.MessageTypeSMS,
+				},
+			},
+		},
+		{
+			description: "single message/unicode",
+			givenMessage: model.Message{
+				Originator: "TestO",
+				Body:       "Test message: ç",
+				Recipients: []string{"1", "2"},
+			},
+			expectedRequest: []model.MBSendRequest{
+				{
+					Message: model.Message{
+						Originator: "TestO",
+						Body:       "Test message: ç",
+						Recipients: []string{"1", "2"},
+						Datacoding: model.DatacodingUnicode,
+					},
+					MessageType: model.MessageTypeSMS,
+				},
+			},
+		},
+		{
+			description: "multipart message/plain",
+			givenMessage: model.Message{
+				Originator: "TestO",
+				Body:       "This is a long test message. The datacoding is plain, no unicode characters are used. This is a long test message. The datacoding is plain, no unicode characters are used.",
+				Recipients: []string{"1", "2"},
+			},
+			expectedRequest: []model.MBSendRequest{
+				{
+					Message: model.Message{
+						Originator: "TestO",
+						Body:       model.Message{Body: "This is a long test message. The datacoding is plain, no unicode characters are used. This is a long test message. The datacoding is plain, no unicode ch"}.GetBinaryBody(),
+						Recipients: []string{"1", "2"},
+						Datacoding: model.DatacodingPlain,
+					},
+					MessageType: model.MessageTypeBinary,
+				},
+				{
+					Message: model.Message{
+						Originator: "TestO",
+						Body:       model.Message{Body: "aracters are used."}.GetBinaryBody(),
+						Recipients: []string{"1", "2"},
+						Datacoding: model.DatacodingPlain,
+					},
+					MessageType: model.MessageTypeBinary,
+				},
+			},
+		},
+		{
+			description: "multipart message/unicode",
+			givenMessage: model.Message{
+				Originator: "TestO",
+				Body:       "This is a test message. Also it contains some uniçode chars, let's  } make it two messages",
+				Recipients: []string{"1", "2"},
+			},
+			expectedRequest: []model.MBSendRequest{
+				{
+					Message: model.Message{
+						Originator: "TestO",
+						Body:       model.Message{Body: "This is a test message. Also it contains some uniçode chars, let's "}.GetBinaryBody(),
+						Recipients: []string{"1", "2"},
+						Datacoding: model.DatacodingPlain,
+					},
+					MessageType: model.MessageTypeBinary,
+				},
+				{
+					Message: model.Message{
+						Originator: "TestO",
+						Body:       model.Message{Body: " } make it two messages"}.GetBinaryBody(),
+						Recipients: []string{"1", "2"},
+						Datacoding: model.DatacodingPlain,
+					},
+					MessageType: model.MessageTypeBinary,
+				},
+			},
+		},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.description, func(t *testing.T) {
+			composed := composeRequest(testCase.givenMessage, nil, nil)
+			if len(testCase.expectedRequest) > 1 {
+				for i, comp := range composed {
+					require.Regexp(t, "050003.*", comp.Message.UDH)
+					composed[i].Message.UDH = ""
+				}
+			}
+			require.Equal(t, testCase.expectedRequest, composed)
 		})
 	}
 }

@@ -16,5 +16,5 @@ cd ./bin
 # Docker build
 docker build -t messagebird_proxy .
 
-# Docker run!
+# Docker run
 docker run --expose 8080 -p 8080:8080 -t messagebird_proxy 

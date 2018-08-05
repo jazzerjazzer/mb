@@ -19,7 +19,7 @@ func TestSplit(t *testing.T) {
 			expectedMessages: []model.Split{
 				{
 					Message:    "----------------------------------------------------------------------------------------------------------------------------------------------------------------",
-					Datacoding: datacodingPlain,
+					Datacoding: model.DatacodingPlain,
 					UDH:        "",
 				},
 			},
@@ -30,12 +30,12 @@ func TestSplit(t *testing.T) {
 			expectedMessages: []model.Split{
 				{
 					Message:    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-					Datacoding: datacodingPlain,
+					Datacoding: model.DatacodingPlain,
 					UDH:        "050003CC0201",
 				},
 				{
 					Message:    "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-					Datacoding: datacodingPlain,
+					Datacoding: model.DatacodingPlain,
 					UDH:        "050003CC0202",
 				},
 			},
@@ -46,7 +46,7 @@ func TestSplit(t *testing.T) {
 			expectedMessages: []model.Split{
 				{
 					Message:    "--------------------------------------------------------------------------------------------------------------------------------------------------------€------",
-					Datacoding: datacodingPlain,
+					Datacoding: model.DatacodingPlain,
 					UDH:        "",
 				},
 			},
@@ -57,12 +57,12 @@ func TestSplit(t *testing.T) {
 			expectedMessages: []model.Split{
 				{
 					Message:    "--------------------------------------------------------------------------------------------------------------------------------------------------------",
-					Datacoding: datacodingPlain,
+					Datacoding: model.DatacodingPlain,
 					UDH:        "050003CC0201",
 				},
 				{
 					Message:    "€-----------------",
-					Datacoding: datacodingPlain,
+					Datacoding: model.DatacodingPlain,
 					UDH:        "050003CC0202",
 				},
 			},
@@ -73,7 +73,7 @@ func TestSplit(t *testing.T) {
 			expectedMessages: []model.Split{
 				{
 					Message:    "°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°",
-					Datacoding: datacodingUnicode,
+					Datacoding: model.DatacodingUnicode,
 					UDH:        "",
 				},
 			},
@@ -84,12 +84,12 @@ func TestSplit(t *testing.T) {
 			expectedMessages: []model.Split{
 				{
 					Message:    "°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°",
-					Datacoding: datacodingUnicode,
+					Datacoding: model.DatacodingUnicode,
 					UDH:        "050003CC0201",
 				},
 				{
 					Message:    "°°°°",
-					Datacoding: datacodingUnicode,
+					Datacoding: model.DatacodingUnicode,
 					UDH:        "050003CC0202",
 				},
 			},
@@ -100,12 +100,12 @@ func TestSplit(t *testing.T) {
 			expectedMessages: []model.Split{
 				{
 					Message:    "°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°",
-					Datacoding: datacodingUnicode,
+					Datacoding: model.DatacodingUnicode,
 					UDH:        "050003CC0201",
 				},
 				{
 					Message:    "°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°",
-					Datacoding: datacodingUnicode,
+					Datacoding: model.DatacodingUnicode,
 					UDH:        "050003CC0202",
 				},
 			},
@@ -113,38 +113,48 @@ func TestSplit(t *testing.T) {
 	}
 
 	for _, testCase := range tests {
-		require.Equal(t, testCase.expectedMessages, Split(testCase.body))
+		splitted := Split(testCase.body)
+		if testCase.expectedMessages[0].UDH != "" {
+			for i, msg := range testCase.expectedMessages {
+				require.Regexp(t, "050003.*", msg.UDH)
+				testCase.expectedMessages[i].UDH = ""
+			}
+			for i := range splitted {
+				splitted[i].UDH = ""
+			}
+		}
+		require.Equal(t, testCase.expectedMessages, splitted)
 	}
 }
 
 func TestGetDataCoding(t *testing.T) {
 	tests := []struct {
 		body               string
-		expectedDatacoding Datacoding
+		expectedDatacoding model.Datacoding
 	}{
 		{
 			body:               "",
-			expectedDatacoding: datacodingPlain,
+			expectedDatacoding: model.DatacodingPlain,
 		},
 		{
 			body:               "   Test",
-			expectedDatacoding: datacodingPlain,
+			expectedDatacoding: model.DatacodingPlain,
 		},
 		{
 			body:               "øøøøøøø",
-			expectedDatacoding: datacodingPlain,
+			expectedDatacoding: model.DatacodingPlain,
 		},
 		{
 			body:               "øøøøøøø",
-			expectedDatacoding: datacodingPlain,
+			expectedDatacoding: model.DatacodingPlain,
 		},
 		{
 			body:               "[~]|€",
-			expectedDatacoding: datacodingPlain,
+			expectedDatacoding: model.DatacodingPlain,
 		},
 		{
 			body:               "[~]|€ç",
-			expectedDatacoding: datacodingUnicode,
+			expectedDatacoding: model.DatacodingUnicode,
 		},
 	}
 	for _, testCase := range tests {

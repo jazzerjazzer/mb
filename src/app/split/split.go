@@ -4,13 +4,11 @@ import (
 	"app/char"
 	"app/model"
 	"fmt"
+	"math/rand"
+	"time"
 )
 
-type Datacoding string
-
 const (
-	datacodingPlain       = "plain"
-	datacodingUnicode     = "unicode"
 	maxSinglePlainChars   = 160
 	maxSingleUnicodeChars = 70
 	maxMultiPlainChars    = 153
@@ -20,18 +18,18 @@ const (
 func Split(m string) []model.Split {
 	datacoding := getDatacoding(m)
 	length := getLength(m, datacoding)
-	if datacoding == datacodingPlain {
+	if datacoding == model.DatacodingPlain {
 		if length > maxSinglePlainChars {
 			splitted := splitImpl(m, maxMultiPlainChars)
-			return attachMetadata(splitted, datacodingPlain)
+			return attachMetadata(splitted, model.DatacodingPlain)
 		}
-		return []model.Split{{Message: m, UDH: "", Datacoding: datacodingPlain}}
+		return []model.Split{{Message: m, UDH: "", Datacoding: model.DatacodingPlain}}
 	}
 	if length > maxSingleUnicodeChars {
 		splitted := splitImpl(m, maxMultiUnicodeChars)
-		return attachMetadata(splitted, datacodingUnicode)
+		return attachMetadata(splitted, model.DatacodingUnicode)
 	}
-	return []model.Split{{Message: m, UDH: "", Datacoding: datacodingUnicode}}
+	return []model.Split{{Message: m, UDH: "", Datacoding: model.DatacodingUnicode}}
 }
 
 func splitImpl(message string, limit int) []model.Split {
@@ -61,22 +59,21 @@ func splitImpl(message string, limit int) []model.Split {
 	return splitted
 }
 
-func attachMetadata(messages []model.Split, datacoding Datacoding) []model.Split {
+func attachMetadata(messages []model.Split, datacoding model.Datacoding) []model.Split {
 	length := len(messages)
-	// TODO: Hardcoded reference?
-	reference := "CC"
+	reference := fmt.Sprintf("%02X", rand.New(rand.NewSource(time.Now().UnixNano())).Intn(256))
 	for i := range messages {
 		udh := "050003" + reference + fmt.Sprintf("%02X", length) + fmt.Sprintf("%02X", i+1)
 		messages[i].UDH = udh
-		messages[i].Datacoding = string(datacoding)
+		messages[i].Datacoding = datacoding
 	}
 	return messages
 }
 
-func getLength(body string, datacoding Datacoding) int {
+func getLength(body string, datacoding model.Datacoding) int {
 	var length int
 	switch datacoding {
-	case datacodingPlain:
+	case model.DatacodingPlain:
 		for _, r := range body {
 			if char.IsBaseGSM7(r) {
 				length++
@@ -84,19 +81,19 @@ func getLength(body string, datacoding Datacoding) int {
 				length = length + 2
 			}
 		}
-	case datacodingUnicode:
+	case model.DatacodingUnicode:
 		length = len([]rune(body))
 	}
 	return length
 }
 
-func getDatacoding(body string) Datacoding {
+func getDatacoding(body string) model.Datacoding {
 	for _, r := range body {
 		if !char.IsBaseGSM7(r) {
 			if !char.IsExtendedGSM7(r) {
-				return datacodingUnicode
+				return model.DatacodingUnicode
 			}
 		}
 	}
-	return datacodingPlain
+	return model.DatacodingPlain
 }

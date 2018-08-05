@@ -7,9 +7,14 @@ import (
 	"github.com/nyaruka/phonenumbers"
 )
 
+type Datacoding string
+
 const (
 	maxOriginatorLength = 11
 	maxRecipientLength  = 50
+
+	DatacodingPlain   Datacoding = "plain"
+	DatacodingUnicode Datacoding = "unicode"
 )
 
 type Message struct {
@@ -17,7 +22,7 @@ type Message struct {
 	Body       string   `json:"body,omitempty"`
 	Recipients []string `json:"recipients,omitempty"`
 	UDH        string
-	Datacoding string
+	Datacoding Datacoding
 }
 
 func (message Message) GetBinaryBody() string {
