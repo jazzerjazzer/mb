@@ -1,0 +1,58 @@
+swagger: '2.0'
+info:
+  title: Messagebird proxy
+  version: "1.0.0"
+host: localhost:8080
+schemes:
+  - http
+produces:
+  - application/json
+consumes:
+  - application/json
+
+paths:
+  /sendMessage:
+    post:
+      description: This endpoint sends message(s) to the given recipients using Messagebird backend. 
+      parameters:
+        - 
+          name: "sendMessageRequest"
+          in: "body"
+          description: "send message request"
+          required: true
+          schema: 
+            $ref: "#/definitions/sendMessageRequest"
+      responses:
+        '200':
+          description: Message(s) are sent succesfuly
+          schema:
+            $ref: '#/definitions/messagebirdResponse'
+        '400':
+          description: Bad request. One or more of the required fields are either empty or populated with invalid data.
+        '405':
+          description: Endpoint is called with something other than POST.
+        '408':
+          description: Service could not get any response from Messagebird backend on time.
+        '500':
+          description: Something went wrong either on service or on the Messagebird side.
+definitions:
+  sendMessageRequest:
+    type: object
+    properties:
+      originator:
+        description: Originator (sender) of the message. If it is not a valid phone number, it can be a maximum 11 characters string. Cannot be emtpy.
+        type: string
+      recipients:
+        description: Recipients of the message, maximum is 50. Cannot be emtpy.
+        type: "array"
+        items: 
+          type: "string"
+      body: 
+        description: Body of the message. Cannot be empty. 
+        type: string
+    required:
+      - originator
+      - recipients
+      - body
+  messagebirdResponse: 
+    description: "Response is already documented here: https://developers.messagebird.com/docs/sms-messaging#send-a-message"

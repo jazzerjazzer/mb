@@ -1,20 +1,16 @@
 #!/bin/sh
 set -e
 
-# Get the api key 
-apiKey=$1
-
 # Build the service
-env GOOS=linux go install -ldflags "-w -X main.apiKey=$apiKey" ./src/app
+env GOOS=linux go install ./src/app
 chmod +x ./bin/linux_amd64/app
 
 # Copy the Dockerfile
 cp ./src/Dockerfile ./bin/
-
 cd ./bin
 
 # Docker build
 docker build -t messagebird_proxy .
 
 # Docker run
-docker run --expose 8080 -p 8080:8080 -t messagebird_proxy 
+docker run -e API_KEY=Wxsljyqzf0kbikO96mtpyY2xw --expose 8080 -p 8080:8080 -t messagebird_proxy  
